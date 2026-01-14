@@ -8,7 +8,7 @@ const PUBLIC_ROUTES = ["/login", "/signup"];
 const PUBLIC_LOGIN_PREFIXES = ["/admin/login", "/mod/login"];
 
 function AuthGuard({ children }: { children: ReactNode }) {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -16,10 +16,39 @@ function AuthGuard({ children }: { children: ReactNode }) {
     PUBLIC_ROUTES.includes(pathname) ||
     PUBLIC_LOGIN_PREFIXES.some((route) => pathname === route);
 
-  if (isPublicRoute) {
-    return <>{children}</>;
-  }
+  useEffect(() => {
+    if (status === "loading") return;
 
+    // 1. Redirect if not logged in
+    if (status === "unauthenticated" && !isPublicRoute) {
+      router.replace("/login");
+      return;
+    }
+
+    // 2. Role-Based Logic (Only if authenticated)
+    if (status === "authenticated") {
+      const role = session?.user?.role;
+
+      // Admin logic: Can ONLY access /admin/...
+      if (role === "ADMIN" && !pathname.startsWith("/admin")) {
+        router.replace("/admin/dashboard"); // Or your admin home
+      }
+
+      // Mod logic: Can ONLY access /mod/...
+      else if (role === "MOD" && !pathname.startsWith("/mod")) {
+        router.replace("/mod/dashboard");
+      }
+
+      // User logic: Cannot access /admin or /mod
+      else if (role === "USER") {
+        if (pathname.startsWith("/admin") || pathname.startsWith("/mod")) {
+          router.replace("/chat"); // Redirect to user home
+        }
+      }
+    }
+  }, [status, pathname, session, router, isPublicRoute]);
+
+  // Handle Loading state
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -28,19 +57,18 @@ function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (status === "unauthenticated") {
-    router.replace("/login");
-    return null;
+  // Prevent flicker: if we are redirecting, show nothing or a loader
+  const role = session?.user?.role;
+  if (status === "authenticated" && !isPublicRoute) {
+    if (role === "ADMIN" && !pathname.startsWith("/admin")) return null;
+    if (role === "MOD" && !pathname.startsWith("/mod")) return null;
+    if (role === "USER" && (pathname.startsWith("/admin") || pathname.startsWith("/mod"))) return null;
   }
 
   return <>{children}</>;
 }
 
-export default function AuthProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       <AuthGuard>{children}</AuthGuard>

@@ -3,6 +3,8 @@
 import { ArrowBigRight, Bell } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "@/lib/socket-client";
+import { Button } from "@/components/ui/button";
+import { signOut } from "next-auth/react";
 
 const EMOJIS = ["😀", "😂", "🥲", "😍", "😎", "🤔", "🔥", "💀", "🚀", "❤️"];
 
@@ -56,6 +58,11 @@ export default function ChatUI() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleLogout = async () => {
+    // This clears the cookie and redirects to the home page (or login)
+    await signOut({ callbackUrl: "/login" }); 
+  };
 
   // SEND MESSAGE
   const sendMessage = () => {
@@ -111,7 +118,9 @@ export default function ChatUI() {
         </div>
 
         <div className="p-4 border-t border-white/5">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex">
+
             <div className="h-9 w-9 rounded-full bg-indigo-500 flex items-center justify-center font-bold">
               U
             </div>
@@ -120,6 +129,10 @@ export default function ChatUI() {
               <p className="text-xs text-white/40">
                 {connected ? "chatting" : "idle"}
               </p>
+            </div>
+            </div>
+            <div className="self-end">
+              <Button onClick={ handleLogout } className="cursor-pointer">Log Out</Button>
             </div>
           </div>
         </div>
