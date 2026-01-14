@@ -19,9 +19,12 @@ export async function POST(req: Request) {
     .blur(10) // blur strength (1–100)
     .toBuffer();
 
-  return new NextResponse(blurredImage2, {
-    headers: {
-      "Content-Type": "image/png",
-    },
-  });
+    return new NextResponse(
+      new Uint8Array(blurredImage2),
+      {
+        headers: {
+          "Content-Type": "image/png",
+        },
+      }
+    );
 }
