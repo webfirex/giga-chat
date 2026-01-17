@@ -33,7 +33,7 @@ export default function MessageList({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 
-    console.log("MESSAGES", messages)
+    // console.log("MESSAGES", messages)
   }, [messages, isTyping, chatStatus]);
 
   return (
@@ -80,7 +80,7 @@ export default function MessageList({
                     }`}
                 >
                   <img
-                    src={m.imageUrl.replace(/^blob:/, '')}
+                    src={m.imageUrl}
                     alt="Shared image"
                     className="max-h-64 object-cover"
                   />

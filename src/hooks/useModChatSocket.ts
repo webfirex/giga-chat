@@ -3,19 +3,31 @@
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "@/lib/socket/socket-mod";
 
+
 export type Message = {
   id: number;
   sender: "me" | "them";
-  text: string;
+  type: "text" | "image" | "gift";
+  text?: string;
+  imageUrl?: string;
+  amount?: number;
+  currency?: "USD" | "EUR" | "INR";
 };
+
+type ModChat = {
+  roomId: string;
+  userId: string;
+  messages: Message[];
+};
+
 
 export function useModChatSocket(modName: string) {
   const socketRef = useRef(getSocket());
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [connected, setConnected] = useState(false);
-  const [partnerName, setPartnerName] = useState<string | null>(null);
+  const [chats, setChats] = useState<ModChat[]>([]);
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
@@ -25,22 +37,69 @@ export function useModChatSocket(modName: string) {
     socket.emit("mod:online", { modName });
 
     // 🔗 CONNECTED TO USER
-    socket.on("chat:connected", () => {
-      setMessages([]);
-      setConnected(true);
-      setPartnerName("USER");
+    socket.on("mod:new-chat", ({ roomId, userId }) => {
+      setChats((prev) => [
+        ...prev,
+        {
+          roomId,
+          userId,
+          messages: [],
+        },
+      ]);
+
+      // Auto-select first chat
+      setActiveRoomId((prev) => prev ?? roomId);
     });
+
 
     // 📩 RECEIVE MESSAGE FROM USER
     socket.on("chat:message", (msg) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: msg.id ?? Date.now(),
-          sender: "them",
-          text: msg.text,
-        },
-      ]);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.roomId === msg.roomId
+            ? {
+              ...chat,
+              messages: [
+                ...chat.messages,
+                {
+                  id: msg.id,
+                  sender: "them",
+                  type: msg.type,
+                  text: msg.type === "text" ? msg.text : undefined,
+                  imageUrl: msg.type === "image" ? msg.text : undefined,
+                  amount: msg.type === "gift" ? msg.amount : undefined,
+                  currency: msg.type === "gift" ? msg.currency : undefined,
+                },
+              ],
+            }
+            : chat
+        )
+      );
+    });
+
+
+    socket.on("chat:gift", (msg) => {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.roomId === msg.roomId
+            ? {
+              ...chat,
+              messages: [
+                ...chat.messages,
+                {
+                  id: msg.id,
+                  sender: "them",
+                  type: msg.type,
+                  text: msg.type === "text" ? msg.text : undefined,
+                  imageUrl: msg.type === "image" ? msg.text : undefined,
+                  amount: msg.type === "gift" ? msg.amount : undefined,
+                  currency: msg.type === "gift" ? msg.currency : undefined,
+                },
+              ],
+            }
+            : chat
+        )
+      );
     });
 
     // ✍️ TYPING INDICATORS
@@ -48,47 +107,69 @@ export function useModChatSocket(modName: string) {
     socket.on("stop:typing", () => setIsTyping(false));
 
     // ❌ CHAT ENDED
-    socket.on("chat:ended", () => {
-      setConnected(false);
-      setPartnerName(null);
-      setMessages([]);
+    socket.on("chat:ended", ({ roomId }) => {
+      setChats((prev) => prev.filter((c) => c.roomId !== roomId));
+    
+      setActiveRoomId((current) =>
+        current === roomId ? null : current
+      );
     });
+    
 
     return () => {
-      socket.off("chat:connected");
+      socket.off("mod:new-chat");
       socket.off("chat:message");
+      socket.off("chat:gift");
       socket.off("typing");
       socket.off("stop:typing");
       socket.off("chat:ended");
     };
+    
   }, [modName]);
 
   // 📤 SEND MESSAGE TO USER
   const sendMessage = (text: string) => {
-    if (!text.trim() || !connected) return;
+    if (!text.trim() || !activeRoomId) return;
 
     // Optimistic UI
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        sender: "me",
-        text,
-      },
-    ]);
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.roomId === activeRoomId
+          ? {
+            ...chat,
+            messages: [
+              ...chat.messages,
+              {
+                id: Date.now(),
+                sender: "me",
+                type: "text",
+                text,
+              },
+            ],
+          }
+          : chat
+      )
+    );
+
+    // alert(messages[messages.length -1].type)
+
 
     // ✅ CORRECT PAYLOAD (MATCHES SERVER)
+    if (!activeRoomId) return;
+
     socketRef.current.emit("chat:message", {
+      roomId: activeRoomId,
       type: "text",
       content: text,
     });
+
 
     socketRef.current.emit("stop:typing");
   };
 
   // ✍️ HANDLE TYPING
   const handleTyping = () => {
-    socketRef.current.emit("typing");
+    socketRef.current.emit("typing", { roomId: activeRoomId});
 
     if (typingTimeout.current) {
       clearTimeout(typingTimeout.current);
@@ -99,23 +180,79 @@ export function useModChatSocket(modName: string) {
     }, 800);
   };
 
-  // ⏭ EXIT / NEXT CHAT
-  const exitChat = () => {
-    socketRef.current.emit("chat:next");
+  const sendImageMessage = async (imageUrl: string) => {
+    if (!imageUrl || !activeRoomId) return;
+    // if (noChatsLeft) return;
+
+    socketRef.current.emit("chat:message", {
+      roomId: activeRoomId,
+      type: "image",
+      content: imageUrl,
+    });
+
+
     socketRef.current.emit("stop:typing");
 
-    setMessages([]);
-    setConnected(false);
-    setPartnerName(null);
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.roomId === activeRoomId
+          ? {
+              ...chat,
+              messages: [
+                ...chat.messages,
+                {
+                  id: Date.now(),
+                  sender: "me",
+                  type: "image",
+                  imageUrl,
+                },
+              ],
+            }
+          : chat
+      )
+    );
+    
+
+    // await decreaseChat();
   };
 
+  // ⏭ EXIT / NEXT CHAT
+  const exitChat = () => {
+    if (!activeRoomId) return;
+  
+    // 🔔 Tell backend to end THIS room only
+    socketRef.current.emit("chat:next", activeRoomId);
+  
+    // 🧹 Remove this chat locally
+    setChats((prev) =>
+      prev.filter((chat) => chat.roomId !== activeRoomId)
+    );
+  
+    // 🧭 Switch to another open chat if any
+    setActiveRoomId((prev) => {
+      const remaining = chats.filter(
+        (chat) => chat.roomId !== prev
+      );
+      return remaining.length ? remaining[0].roomId : null;
+    });
+  
+    // ✍️ Stop typing ONLY for this room
+    socketRef.current.emit("stop:typing", {
+      roomId: activeRoomId,
+    });
+  };
+  
+
   return {
-    messages,
-    connected,
-    partnerName,
+    chats,                // for side panel
+    activeRoomId,
+    setActiveRoomId,      // clicking side panel
+    activeMessages: chats.find(c => c.roomId === activeRoomId)?.messages ?? [],
     isTyping,
     sendMessage,
     handleTyping,
     exitChat,
+    sendImageMessage,
   };
+  
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowBigRight, Video, LucideGift, ImageIcon, Loader2 } from "lucide-react";
+import { ArrowBigRight, Video, LucideGift, ImageIcon, Loader2, Send, SendToBack, SendHorizonalIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmojiInput from "@/components/ui/emoji-input";
 import { usePlan } from "@/contexts/PlanContext";
@@ -78,7 +78,7 @@ export default function ChatControls({
 
   const uploadImageToDB = async (file: File): Promise<string> => {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     // Replace this with your actual endpoint (e.g., Cloudinary, S3, or local API)
     const response = await fetch("/api/user/upload-image", {
@@ -87,11 +87,14 @@ export default function ChatControls({
     });
 
     const data = await response.json();
-    if (!data.success) throw new Error("Upload failed");
+    if (!data.success){ 
+      console.log("MESSAGE IMAGE BB", data)
+      throw new Error("Upload failed");
+    }
     
-    return data.url; // The hosted link returned by your DB/Storage
+    return data.imageUrl; // The hosted link returned by your DB/Storage
   };
-
+ 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -109,8 +112,8 @@ export default function ChatControls({
     try {
       setIsUploading(true);
   
-      // const hostedUrl = await uploadImageToDB(file);
-      const hostedUrl = URL.createObjectURL(file);
+      const hostedUrl = await uploadImageToDB(file);
+      // const hostedUrl = URL.createObjectURL(file);
   
       await onSendImage(hostedUrl);
   
@@ -274,12 +277,12 @@ export default function ChatControls({
             !connected ||
             (state?.chat_timer !== 0 && cooldown > 0)
           }
-          className="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 transition-colors"
+          className="py-3 px-3 rounded-full bg-white/20 hover:bg-indigo-500 disabled:opacity-40 transition-colors"
         >
           {state?.chat_timer !== 0 && cooldown > 0 ? (
             <span className="text-sm font-mono">{cooldown}s</span>
           ) : (
-            <ArrowBigRight />
+              <SendHorizonalIcon className="h-6 w-6"/>
           )}
         </button>
       </div>

@@ -110,3 +110,8 @@ model Chat {
   id String @id @default(uuid())
   chats Json
 }
+
+model Image {
+  id String @id @default(uuid())
+  imageUrl String
+}

@@ -7,10 +7,18 @@ export type Role = "user" | "mod";
 // ==============================
 
 // Mods available for matchmaking
-export const freeMods = new Set<string>();
+// Max chats a mod can handle
+export const MAX_CHATS_PER_MOD = 100;
 
-// socket.id -> partner socket.id
-export const activeChats = new Map<string, string>();
+// modSocketId -> active chat count
+export const modLoads = new Map<string, number>();
+
+// roomId -> { userId, modId }
+export const activeChats = new Map<
+  string,
+  { userId: string; modId: string }
+>();
+
 
 // socket.id -> matchmaking timeout
 export const searchTimeouts = new Map<string, NodeJS.Timeout>();
@@ -29,29 +37,34 @@ export const clearSearch = (socketId: string) => {
 // ==============================
 // End chat & cleanup room
 // ==============================
-export const endChat = (io: SocketIOServer, socket: Socket) => {
-  const partnerId = activeChats.get(socket.id);
-  const roomId = socket.data.roomId;
+export const endChat = (
+  io: SocketIOServer,
+  roomId: string
+) => {
+  const chat = activeChats.get(roomId);
+  if (!chat) return;
 
-  if (!partnerId || !roomId) return;
+  const { userId, modId } = chat;
 
-  const partnerSocket = io.sockets.sockets.get(partnerId);
+  const userSocket = io.sockets.sockets.get(userId);
+  const modSocket = io.sockets.sockets.get(modId);
 
   // 🔔 Notify both
-  io.to(roomId).emit("chat:ended");
+  io.to(roomId).emit("chat:ended", { roomId });
 
   // 🚪 Leave room
-  socket.leave(roomId);
-  partnerSocket?.leave(roomId);
+  userSocket?.leave(roomId);
+  modSocket?.leave(roomId);
 
-  // 🧹 Cleanup
-  activeChats.delete(socket.id);
-  activeChats.delete(partnerId);
+  // 🧹 Remove room from socket data
+  userSocket?.data.rooms?.delete(roomId);
+  modSocket?.data.rooms?.delete(roomId);
 
-  socket.data.roomId = null;
-  if (partnerSocket) partnerSocket.data.roomId = null;
+  // ♻️ Decrease mod load
+  modLoads.set(
+    modId,
+    Math.max(0, (modLoads.get(modId) ?? 1) - 1)
+  );
 
-  // ♻️ Re-queue mods
-  if (socket.data.role === "mod") freeMods.add(socket.id);
-  if (partnerSocket?.data.role === "mod") freeMods.add(partnerId);
+  activeChats.delete(roomId);
 };

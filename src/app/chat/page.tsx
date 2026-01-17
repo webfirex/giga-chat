@@ -2,17 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "@/lib/socket/socket-client";
-import { signOut } from "next-auth/react";
-import { redirect } from "next/navigation";
 
 import ChatHeader from "@/components/chat/ChatHeader";
 import MessageList from "@/components/chat/MessageList";
 import ChatControls from "@/components/chat/ChatControls";
 import { usePlan } from "@/contexts/PlanContext";
-import { Socket } from "socket.io-client";
-import Sidebar from "@/components/chat/ChatSidebar";
 import { IconX } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import { removeEmojis } from "@/lib/utils";
 
 type Message = {
   id: number;
@@ -33,6 +30,7 @@ export default function UserChatPage() {
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
   const [partnerName, setPartnerName] = useState<string | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [searchingText, setSearchingText] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(1);
@@ -52,13 +50,17 @@ export default function UserChatPage() {
     socket.emit("user:identify", { username });
 
     socket.on("match:searching", (delay: number) => setSearchingText(`Searching...`));
-    socket.on("chat:connected", () => {
+    socket.on("chat:connected", ({ roomId }) => {
+      setRoomId(roomId);
       setMessages([]);
       setConnected(true);
       setPartnerName("Random MOD NAME");
       setSearchingText(null);
     });
+    
     socket.on("chat:message", (msg) => {
+    //  console.log("MESSAGE USER",msg)
+    if (msg.roomId !== roomId) return
       setMessages((prev) => [
         ...prev,
         {
@@ -73,7 +75,13 @@ export default function UserChatPage() {
 
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop:typing", () => setIsTyping(false));
-    socket.on("chat:ended", () => { setConnected(false); setPartnerName(null); });
+    // socket.on("chat:ended", () => { setConnected(false); setPartnerName(null); });
+    socket.on("chat:ended", () => {
+      setConnected(false);
+      setPartnerName(null);
+      setRoomId(null);
+    });
+    
     socket.on('no-mod-available', () => {
       notifications.show({
         title: 'No one is available',
@@ -95,7 +103,14 @@ export default function UserChatPage() {
   }, [searchingText]);
 
   const handleInputChange = (value: string) => {
-    setInput(value);
+    let input = value
+    if(!state?.can_send_emojis){
+      const filter = removeEmojis(input)
+      setInput(filter);
+    }
+    else{
+      setInput(input);
+    }
     if (!connected) return;
     socketRef.current.emit("typing");
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
@@ -107,9 +122,11 @@ export default function UserChatPage() {
     if (noChatsLeft) return;
 
     socketRef.current.emit("chat:message", {
+      roomId,
       type: "text",
       content: input,
     });
+    
     // ✅ Optimistically add your own message
     setMessages((prev) => [
       ...prev,
@@ -123,8 +140,8 @@ export default function UserChatPage() {
 
     socketRef.current.emit("stop:typing");
 
-    await decreaseChat();
     setInput("");
+    await decreaseChat();
   };
 
   const sendImageMessage = async (imageUrl: string) => {
@@ -193,7 +210,10 @@ export default function UserChatPage() {
 
     setTimeout(() => {
       if (socketRef.current) {
-        socketRef.current.emit("chat:next");
+        // socketRef.current.emit("chat:next");
+        if (roomId) {
+          socketRef.current.emit("chat:next", roomId);
+        }        
         socketRef.current.emit("user:next");
       }
     }, delay);

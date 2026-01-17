@@ -23,7 +23,7 @@ export default function EmojiInput({ value, onChange, disabled }: any) {
       </button>
 
       {show && (
-        <div className="absolute bottom-full right-0 z-50 mt-2">
+        <div className="absolute bottom-full right-1 z-50 mt-2">
           <Picker
             theme={Theme.DARK} // Use the enum here
             onEmojiClick={(emoji) => {

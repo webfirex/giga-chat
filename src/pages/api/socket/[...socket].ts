@@ -3,11 +3,12 @@ import { Server as SocketIOServer, Socket } from "socket.io";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import {
-  freeMods,
+  modLoads,
   clearSearch,
   endChat,
   Role,
 } from "@/lib/socket/socket-utils";
+
 
 import {
   handleUserNext,
@@ -22,7 +23,7 @@ type NextApiResponseWithSocket = NextApiResponse & {
 };
 
 export default function handler(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponseWithSocket
 ) {
   if (!res.socket.server.io) {
@@ -42,7 +43,12 @@ export default function handler(
       }
 
       socket.data.role = role;
-      if (role === "mod") freeMods.add(socket.id);
+      socket.data.rooms = new Set<string>();
+      
+      if (role === "mod") {
+        modLoads.set(socket.id, 0);
+      }
+      
 
       // ==========================
       // Chat events
@@ -67,13 +73,25 @@ export default function handler(
         }
       });
 
-      socket.on("chat:next", () => endChat(io, socket));
+      socket.on("chat:next", (roomId: string) => {
+        if (!roomId) return;
+        endChat(io, roomId);
+      });
+      
 
       socket.on("disconnect", () => {
         clearSearch(socket.id);
-        endChat(io, socket);
-        freeMods.delete(socket.id);
+      
+        // End all rooms this socket was part of
+        for (const roomId of socket.data.rooms ?? []) {
+          endChat(io, roomId);
+        }
+      
+        if (socket.data.role === "mod") {
+          modLoads.delete(socket.id);
+        }
       });
+      
     });
 
     res.socket.server.io = io;

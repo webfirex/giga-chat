@@ -7,23 +7,20 @@ import { useEffect, useRef, useState } from "react";
 
 interface ChatHeaderProps {
   connected: boolean;
-  partner?: {
+  partner: {
     name: string;
     avatarUrl?: string;
   } | null;
-  user?: {
-    name: string;
-    avatarUrl: string;
-  };
-  onNext:() => void
+  onNext: () => void;
 }
+
 
 interface Friend {
   id: string;
   name: string;
 }
 
-export default function ModChatHeader({ connected, partner, user, onNext }: ChatHeaderProps) {
+export default function ModChatHeader({ connected, partner, onNext }: ChatHeaderProps) {
   const { state } = usePlan();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -68,9 +65,20 @@ export default function ModChatHeader({ connected, partner, user, onNext }: Chat
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    if (connected) {
+      setFriendsOpen(false);
+    }
+  }, [connected]);
+  
+
   const isFreePlan = state?.planName === "Free";
 
-  const displayName = connected ? partner?.name ?? 'User' : 'ME';
+  // const displayName = connected ? partner?.name ?? 'User' : 'ME';
+  const displayName = connected && partner
+  ? partner.name
+  : 'Me';
+
   const initial = displayName.charAt(0).toUpperCase();
 
   const filteredFriends = friends.filter(f =>
@@ -157,7 +165,7 @@ export default function ModChatHeader({ connected, partner, user, onNext }: Chat
           <button 
             onClick={onNext}
             className={`px-3 py-1.5 flex gap-2 text-xs rounded-md font-medium transition bg-indigo-950`}>
-            <span className="pt-1">Skip</span><ArrowRightCircle />
+            <span className="">Skip</span><ArrowRightCircle />
           </button>
           <button
             disabled={isFreePlan}

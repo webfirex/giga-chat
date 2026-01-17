@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import {
-  freeMods,
+  modLoads,
+  MAX_CHATS_PER_MOD,
   activeChats,
   searchTimeouts,
   endChat,
@@ -30,8 +31,8 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   if (socket.data.role !== "user") return;
 
   clearSearch(socket.id);
-  endChat(io, socket);
-  freeMods.delete(socket.id);
+  // endChat(io, socket);
+  // freeMods.delete(socket.id);
 
   // Matchmaking delay: 3-12 minutes based on your code (3*60*10 to 12*60*10)
   // Note: Your original math was (min 3000ms to 7200ms). Adjust if needed.
@@ -42,7 +43,10 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   socket.emit("match:searching", delay);
 
   const timeout = setTimeout(() => {
-    const modSocketId = [...freeMods].find((id) => id !== socket.id);
+    // const modSocketId = [...freeMods].find((id) => id !== socket.id);
+    const modSocketId = [...modLoads.entries()]
+  .filter(([_, count]) => count < MAX_CHATS_PER_MOD)
+  .sort((a, b) => a[1] - b[1])[0]?.[0];
     if (!modSocketId) {
       socket.emit("no-mod-available");
       return;
@@ -59,16 +63,24 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
     modSocket.join(roomId);
     
     // 🔑 STORE ROOM ID
-    socket.data.roomId = roomId;
-    modSocket.data.roomId = roomId;
+    socket.data.rooms.add(roomId);
+    modSocket.data.rooms.add(roomId);
     
     // 🔑 TRACK ACTIVE CHAT
-    freeMods.delete(modSocketId);
-    activeChats.set(socket.id, modSocketId);
-    activeChats.set(modSocketId, socket.id);
+    activeChats.set(roomId, {
+      userId: socket.id,
+      modId: modSocketId,
+    });
+
+    modLoads.set(modSocketId, (modLoads.get(modSocketId) ?? 0) + 1);
     
     // 🔔 NOTIFY BOTH SIDES
-    io.to(roomId).emit("chat:connected");
+    io.to(roomId).emit("chat:connected", { roomId });
+
+    modSocket.emit("mod:new-chat", {
+      roomId,
+      userId: socket.id,
+    });
     
     console.log("ROOM CREATED:", roomId);
     
@@ -88,11 +100,12 @@ export const handleMessage = (
   const roomId = socket.data.roomId;
   if (!roomId) return;
 
-  io.to(roomId).emit("chat:message", {
+  socket.to(roomId).emit("chat:message", {
     id: Date.now(),
     sender: socket.data.role,
     type,
     text: content,
+    roomId
   });
 };
 
@@ -112,6 +125,7 @@ export const handleGiftMessage = (io: SocketIOServer, socket: Socket, payload: G
     amount,
     currency,
     giftId,
+    roomId
   });
 };
 
