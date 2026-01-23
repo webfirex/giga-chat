@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    /* File Layout */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* Modules & Environment */
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler", // Allows for cleaner imports
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    /* Outputs */
+    "sourceMap": true,
+    "declaration": true,
+
+    /* Typechecking */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+
+    /* Formatting / Style */
+    "verbatimModuleSyntax": false, // This was the culprit
+    "isolatedModules": true,
+    "moduleDetection": "force"
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
