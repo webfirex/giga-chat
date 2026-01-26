@@ -26,6 +26,7 @@ export async function POST(req: Request) {
         age: true,
         pfpUrl: true,
         totalGiftAmount: true,
+        totalImageAmount: true,
         plan: {
           select: {
             name: true,
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
       age: user.age,
       avatarUrl: user.pfpUrl,
       totalGiftAmount: user.totalGiftAmount,
+      totalImageAmount: user.totalImageAmount,
       planName: user.plan?.name ?? null,
     };
 

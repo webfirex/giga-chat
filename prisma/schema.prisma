@@ -15,33 +15,34 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  firstName       String
-  lastName        String
-  phone           String    @unique
-  password        String
-  lastLogin       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  firstName        String
+  lastName         String
+  phone            String    @unique
+  password         String
+  lastLogin        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Profile and Chat Info
-  username        String?   @unique
-  gender          String?
-  chatCount       Int       @default(50)
-  pfpUrl          String?
-  age             Int       @default(18)
-  city            String?
-  state           String?
-  interests       String[]  // Array of strings for interests
+  username         String?   @unique
+  gender           String?
+  chatCount        Int       @default(50)
+  pfpUrl           String?
+  age              Int       @default(18)
+  city             String?
+  state            String?
+  interests        String[]  // Array of strings for interests
   
   // Settings
-  genderMatch     String    @default("random")
+  genderMatch      String    @default("random")
   
   // Social & Safety
-  friends         Json?     // Stores array of {id, name, chat_id}
-  giftsSent       Int[]
-  totalGiftAmount Int       @default(0)
-  reportCount     Int       @default(0)
+  friends          Json?     // Stores array of {id, name, chat_id}
+  giftsSent        Int[]
+  totalGiftAmount  Int       @default(0)
+  totalImageAmount Int       @default(0)
+  reportCount      Int       @default(0)
   
   // Billing & Subscription
   billingDate     DateTime?

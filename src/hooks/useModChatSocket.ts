@@ -34,6 +34,7 @@ export type UserDetails = {
   age: number;
   avatarUrl: string | null;
   totalGiftAmount: number;
+  totalImageAmount: number;
   planName: string | null;
   genderMatch: "male" | "female" | "random" | null,
 };
@@ -124,7 +125,8 @@ export function useModChatSocket(modName: string) {
             age: 18,
             gender:"",
             genderMatch:"random",
-            totalGiftAmount: 0
+            totalGiftAmount: 0,
+            totalImageAmount: 0,
           };
         }
       } catch (err) {
@@ -141,6 +143,7 @@ export function useModChatSocket(modName: string) {
           age: 18,
           gender:"",
           genderMatch:"random",
+          totalImageAmount: 0,
           totalGiftAmount: 0
         };
       }

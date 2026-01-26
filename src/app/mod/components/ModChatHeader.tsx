@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { usePlan } from "@/contexts/PlanContext";
 import { RandomUserProfile, UserDetails, useModChatSocket } from "@/hooks/useModChatSocket";
+import { notifications } from "@mantine/notifications";
 import { Settings, UserPlus2Icon, ArrowRightCircle } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { MouseEventHandler, useEffect, useRef, useState } from "react";
@@ -41,6 +42,13 @@ export default function ModChatHeader({ connected, userDetails, randomProfile, o
   }, []);
   */
 
+  const alertNotification = () =>{
+    notifications.show({
+      title:"Coming Soon",
+      message:"Friends feature coming soon"
+    })
+  }
+
 
   
 
@@ -78,6 +86,7 @@ export default function ModChatHeader({ connected, userDetails, randomProfile, o
               <span className="text-[10px] text-green-400 flex items-center gap-1">
                 {userDetails?.planName} Plan
                 <span className="ml-1 text-white/50">Gifts Purchased: ₹{userDetails?.totalGiftAmount}</span>
+                <span className="ml-1 text-white/50">Images Purchased: ₹{userDetails?.totalImageAmount}</span>
               </span>
             )}
           </div>
@@ -97,7 +106,8 @@ export default function ModChatHeader({ connected, userDetails, randomProfile, o
           </button>
           <Button
             disabled={userDetails?.planName == "Free"}
-            onClick={()=>sendFriendRequest(roomId)}
+            // onClick={()=>sendFriendRequest(roomId)}
+            onClick={()=>alertNotification}
             className={`px-3 py-1.5 text-xs rounded-md font-medium transition
                 ${userDetails?.planName == "Free"
                     ? "text-white/40 cursor-not-allowed"

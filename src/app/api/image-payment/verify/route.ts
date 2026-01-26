@@ -74,7 +74,7 @@ export async function POST(req: Request) {
         prisma.user.update({
           where: { id: payment.userId },
           data: {
-            totalGiftAmount: {
+            totalImageAmount: {
               increment: Number(amount),
             },
           },

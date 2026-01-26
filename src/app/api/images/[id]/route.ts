@@ -2,18 +2,20 @@ import { prisma } from "@/lib/prisma";
 import sharp from "sharp";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+type Context = {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(_request: NextRequest, context: Context) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
     return new Response("Unauthorized", { status: 403 });
   }
 
-  const { id } = await params;
+  const { id } = await context.params;
 
   const image = await prisma.image.findUnique({
     where: { id },
