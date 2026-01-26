@@ -289,28 +289,34 @@ export default function EditProfileModal({
 
         <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4 flex items-center justify-between">
 
-          <div className='flex gap-4'>
+          <div className='flex gap-14'>
 
-            <div>
+            <div className=''>
               <p className="text-sm font-medium text-white">Current Plan</p>
               <p className="text-xs text-zinc-400">
                 {state?.planName ?? 'Free'}
               </p>
             </div>
-
+            {/* 
             <div>
+              <p className="text-sm font-medium text-white">Chats Left</p>
+              <p className="text-xs text-zinc-400">
+                {loading ? "Loading..." : (Number(chatCount) > 1000 ? "Inf" : chatCount)}
+              </p>
+            </div> */}
+
+          </div>
+
+          <div className="flex gap-2">
+          <div className='pr-6'>
               <p className="text-sm font-medium text-white">Chats Left</p>
               <p className="text-xs text-zinc-400">
                 {loading ? "Loading..." : (Number(chatCount) > 1000 ? "Inf" : chatCount)}
               </p>
             </div>
 
-          </div>
-
-          <div className="flex gap-2">
-
             {/* BASIC */}
-            {state?.planName === 'Basic' && (
+            {/* {state?.planName === 'Basic' && (
               <>
                 <Button
                   size="xs"
@@ -318,10 +324,10 @@ export default function EditProfileModal({
                   variant="light"
                   onClick={handleCancelPlan}
                 >
-                  Cancel Plan
+                  Cancel Plans
                 </Button>
               </>
-            )}
+            )} */}
 
             {/* PREMIUM */}
             {state?.planName === 'Premium' && (
@@ -333,14 +339,14 @@ export default function EditProfileModal({
               >
                 Downgrade
               </Button> */}
-                <Button
+                {/* <Button
                   size="xs"
                   color="red"
                   variant="light"
                   onClick={handleCancelPlan}
                 >
-                  Cancel Plan
-                </Button>
+                  Cancel Plans
+                </Button> */}
               </>
             )}
           </div>

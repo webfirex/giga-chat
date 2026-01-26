@@ -145,6 +145,7 @@ export function useModChatSocket(modName: string) {
         };
       }
 
+      const userProfile = await generateRandomUser(userDetails.genderMatch ==="random"?"male": (userDetails.genderMatch?? "male") );
       // 🧠 Create chat WITH userDetails
       setChats((prev) => [
         ...prev,
@@ -157,7 +158,6 @@ export function useModChatSocket(modName: string) {
           messages: [],
         },
       ]);
-      const userProfile = generateRandomUser(userDetails.genderMatch ==="random"?"male": (userDetails.genderMatch?? "male") );
       socket.emit("chat:send-user-profile", {
         roomId,
         userProfile,

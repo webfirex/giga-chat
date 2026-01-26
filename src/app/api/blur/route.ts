@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     .toBuffer();
 
     return new NextResponse(
-      new Uint8Array(blurredImage2),
+      blurredImage2,
       {
         headers: {
           "Content-Type": "image/png",

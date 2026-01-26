@@ -31,7 +31,7 @@ export default function MessageList({
   }, [messages, isTyping]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
       {messages.length === 0 && (
         <div className="text-center text-white/40 text-sm mt-8">
           No messages yet
@@ -57,7 +57,7 @@ export default function MessageList({
               >
                 {m.text}
               </div>
-            )}
+            )} 
 
             {/* IMAGE */}
             {m.type === "image" && m.imageUrl && (
@@ -69,7 +69,7 @@ export default function MessageList({
                 }`}
               >
                 <img
-                  src={m.imageUrl}
+                  src={parseImageText(m.imageUrl)}
                   alt="Shared"
                   className="max-h-64 object-cover"
                 />
@@ -106,4 +106,19 @@ export default function MessageList({
       <div ref={bottomRef} />
     </div>
   );
+}
+
+
+const IMAGE_PRICE_MARKER = " + imagePrice=";
+
+function parseImageText(text?: string) {
+  if (!text) return undefined
+
+  if (text.includes(IMAGE_PRICE_MARKER)) {
+    const [url, priceStr] = text.split(IMAGE_PRICE_MARKER);
+    const imageSrc = `/api/images/${url}`;
+    return imageSrc
+  }
+
+  return text
 }

@@ -6,6 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+function getRandomItem<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 export const removeEmojis = (text: string) => {
   return text.replace(
     /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu,
@@ -13,42 +17,30 @@ export const removeEmojis = (text: string) => {
   );
 };
 
-// 👤 Gender-based names
-const MALE_NAMES = ["Aarav", "Liam", "Noah", "Ethan", "Arjun"];
-const FEMALE_NAMES = ["Sophia", "Olivia", "Emma", "Mia", "Aanya"];
-
-const CITIES = ["New York", "London", "Mumbai", "Berlin", "Toronto", "Paris"];
-
-function getRandomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
 type GenderMatch = "male" | "female" | "random";
 
-export function generateRandomUser(
+export async function generateRandomUser(
   genderMatch: GenderMatch
-): RandomUserProfile {
+): Promise<RandomUserProfile> {
+  const res = await fetch(
+    `/api/mod/get-random-user?gender=${genderMatch}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
 
-  // 🎯 Resolve actual gender
-  const resolvedGender: "male" | "female" =
-    genderMatch === "random"
-      ? Math.random() < 0.5
-        ? "male"
-        : "female"
-      : genderMatch;
+  if (!res.ok) {
+    throw new Error("Failed to fetch random user");
+  }
 
-  const name =
-    resolvedGender === "male"
-      ? getRandomItem(MALE_NAMES)
-      : getRandomItem(FEMALE_NAMES);
-
-  const age = Math.floor(Math.random() * (40 - 18 + 1)) + 18;
+  const data = await res.json();
 
   return {
-    name,
-    username: `${name.toLowerCase()}_${Math.floor(Math.random() * 10000)}`,
-    avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}_${Math.random()}`,
-    age,
-    city: getRandomItem(CITIES),
+    name: data.name,
+    username: data.username,
+    avatarUrl: data.avatarUrl,
+    age: data.age,
+    city: data.city,
   };
 }

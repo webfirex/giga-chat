@@ -48,12 +48,20 @@ model User {
   planId          String?
   plan            Plan?     @relation(fields: [planId], references: [id])
 
-  autopayEnabled  Boolean   @default(true)
+  autopayEnabled  Boolean   @default(false)
   payuSubId       String?   // subscription id from PayU for autopay
-  pendingPlanId   String?   // for downgrade
+  pendingPlanId   String?   @default("kjenjkeb3bd2rbr32ibr342r")
 }
 
-
+model RandomUser {
+  id        String  @id @default(uuid()) @unique
+  fullName  String
+  userName  String
+  pfpUrl    String
+  age       Int
+  gender    String
+  city      String
+}
 
 model Plan {
   id              String   @id @default(uuid())

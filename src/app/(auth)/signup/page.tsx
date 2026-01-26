@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Calendar } from "lucide-react";
 
 const Page = () => {
   const router = useRouter();
@@ -129,32 +130,53 @@ const Page = () => {
           required
           className="mb-4 w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:ring-1 focus:ring-indigo-500"
         />
-        <input
-          type="date"
-          value={DOB}
-          onChange={(e) => setDOB(e.target.value)}
-          required
-          max={new Date(
-            new Date().setFullYear(new Date().getFullYear() - 18)
-          ).toISOString().split("T")[0]}
-          className="
-            mb-4 w-full rounded-lg
-            border border-white/10
-            bg-black/30
-            px-4 py-2
-            text-white
-            focus:ring-1 focus:ring-indigo-500
-            [color-scheme:dark]
-          "
-        />
+        <div className="relative mb-4">
+          <input
+            type="date"
+            value={DOB}
+            onChange={(e) => setDOB(e.target.value)}
+            required
+            data-has-value={!!DOB}
+            max={new Date(
+              new Date().setFullYear(new Date().getFullYear() - 18)
+            ).toISOString().split("T")[0]}
+            className="
+              peer w-full rounded-lg
+              border border-white/10
+              bg-black/30
+              px-4 py-2
+              text-white
+              focus:ring-1 focus:ring-indigo-500
+              [color-scheme:dark]
+            "
+          />
+          <label
+            className="
+              absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-md
+              pointer-events-none transition-all
+              peer-focus:opacity-0 peer-focus:text-indigo-400
+              peer-valid:-top-2 peer-valid:opacity-0 peer-[data-has-value=true]:opacity-0
+              bg-[#0e1326] px-1
+            "
+          >
+            Date of Birth (18+)
+          </label>
+          <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500">
+            <Calendar />
+          </div>
+          <div className="absolute right-1 top-1 h-[calc(100%-8px)] w-3 rounded-full bg-[#10131f] pointer-events-none" />
+        </div>
+
 
         {/* Phone (numbers only) */}
         <input
           type="tel"
           value={phone}
           onChange={(e) => {
-            if (/^\d*$/.test(e.target.value)) {
-              setPhone(e.target.value);
+            const value = e.target.value;
+
+            if (/^\d*$/.test(value) && value.length <= 10) {
+              setPhone(value);
             }
           }}
           placeholder="Phone number"
@@ -163,12 +185,13 @@ const Page = () => {
           className="mb-4 w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:ring-1 focus:ring-indigo-500"
         />
 
+
         {/* Password */}
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+          placeholder="Password"
           required
           className="mb-6 w-full rounded-lg border border-white/10 bg-black/30 px-4 py-2 text-white focus:ring-1 focus:ring-indigo-500"
         />

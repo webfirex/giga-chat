@@ -14,7 +14,7 @@ function generatePayUHash({
 }: {
   key: string
   txnid: string
-  amount: string // IMPORTANT: string, not number
+  amount: string
   productinfo: string
   firstname: string
   email: string
@@ -27,16 +27,7 @@ function generatePayUHash({
     productinfo,
     firstname,
     email,
-    '', // udf1
-    '', // udf2
-    '', // udf3
-    '', // udf4
-    '', // udf5
-    '', // empty
-    '', // empty
-    '', // empty
-    '', // empty
-    '', // empty
+    '', '', '', '', '', '', '', '', '', '',
     salt,
   ].join('|')
 
@@ -46,7 +37,6 @@ function generatePayUHash({
     .digest('hex')
 }
 
-
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
 
@@ -54,7 +44,11 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { amount } = await req.json()
+  const { amount, imageId } = await req.json()
+
+  if (!imageId) {
+    return Response.json({ error: 'Missing imageId' }, { status: 400 })
+  }
 
   if (!amount || amount < 10) {
     return Response.json({ error: 'Invalid amount' }, { status: 400 })
@@ -67,23 +61,26 @@ export async function POST(req: Request) {
     session.user.email ||
     `${session.user.phone}@yourapp.local`
 
+  const productinfo = `Unlock Image ${imageId}`
+
   const hash = generatePayUHash({
     key: process.env.PAYU_MERCHANT_KEY!,
     txnid,
     amount: normalizedAmount,
-    productinfo: 'Chat Gift',
+    productinfo,
     firstname: session.user.firstName || 'User',
     email,
     salt: process.env.PAYU_SALT!,
   })
 
+  // 🔐 Create IMAGE payment entry
   await prisma.payment.create({
     data: {
       txnid,
       userId: session.user.id,
       amount: Number(normalizedAmount),
-      type: 'GIFT',
-      refId: session.user.id,
+      type: 'IMAGE',
+      refId: imageId,
       status: 'PENDING',
     },
   })
@@ -94,14 +91,13 @@ export async function POST(req: Request) {
       key: process.env.PAYU_MERCHANT_KEY,
       txnid,
       amount: normalizedAmount,
-      productinfo: 'Chat Gift',
+      productinfo,
       firstname: session.user.firstName || 'User',
       email,
       phone: session.user.phone,
-      surl: `${process.env.BASE_URL}/api/gift/verify`,
-      furl: `${process.env.BASE_URL}/api/gift/verify`,
+      surl: `${process.env.BASE_URL}/api/image-payment/verify`,
+      furl: `${process.env.BASE_URL}/api/image-payment/verify`,
       hash,
     },
   })
 }
-

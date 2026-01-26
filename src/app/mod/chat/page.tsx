@@ -80,7 +80,7 @@ export default function ModChatPage() {
           messages={activeMessages}
           isTyping={isTyping}
           partnerName={
-            activeChat ? `User ${activeChat.userId.slice(0, 6)}` : null
+            activeChat ? `hi` : null
           }
         />
 

@@ -97,7 +97,7 @@ export default function ModChatHeader({ connected, userDetails, randomProfile, o
           </button>
           <Button
             disabled={userDetails?.planName == "Free"}
-            // onClick={()=>sendFriendRequest(roomId)}
+            onClick={()=>sendFriendRequest(roomId)}
             className={`px-3 py-1.5 text-xs rounded-md font-medium transition
                 ${userDetails?.planName == "Free"
                     ? "text-white/40 cursor-not-allowed"

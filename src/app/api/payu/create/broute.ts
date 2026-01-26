@@ -1,13 +1,12 @@
-import crypto from 'crypto'
-import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import crypto from 'crypto'
+import { getServerSession } from 'next-auth'
 
 export async function POST(req: Request) {
   const { planId } = await req.json()
   const session = await getServerSession(authOptions)
-
-  if(!session?.user.id){
+  if (!session?.user.id){
     return
   }
 
@@ -28,7 +27,7 @@ export async function POST(req: Request) {
   })
 
   return Response.json({
-    action: `${process.env.PAYU_BASE_URL}/_payment`,
+    action: 'https://test.payu.in/_payment',
     payload: {
       key: process.env.PAYU_MERCHANT_KEY,
       txnid,
@@ -36,13 +35,6 @@ export async function POST(req: Request) {
       productinfo: plan.name,
       firstname: session.user.firstName,
       phone: session.user.phone,
-
-      // 🔥 Recurring params
-      enable_payu_subs: 1,
-      subscription_type: 'MONTHLY',
-      billing_cycle: 1,
-      billing_amount: plan.price,
-
       surl: `${process.env.BASE_URL}/api/payu/verify`,
       furl: `${process.env.BASE_URL}/api/payu/verify`
     }

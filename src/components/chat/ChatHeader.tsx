@@ -9,6 +9,7 @@ import EditProfileModal from './EditProfileModal';
 import { RandomUserProfile } from '@/hooks/useModChatSocket';
 import PlanBadge from '../ui/planBadge';
 import InterestsModal from './InterestsModal';
+import { notifications } from '@mantine/notifications';
 
 interface ChatHeaderProps {
   connected: boolean;
@@ -35,6 +36,12 @@ export default function ChatHeader({ connected, partnerProfile, searchingText, s
 
   const [randomCommonInterests, setRandomCommonInterests] = useState<string[] | null>(null);
 
+  const sendFriendRequest2 = () =>{
+    notifications.show({
+      title:"Coming soon",
+      message:"Friend requests will be available in the next update"
+    })
+  }
   useEffect(() => {
     // Not connected or no interests → nothing
     if (!connected || userInterests.length === 0) {
@@ -160,7 +167,7 @@ export default function ChatHeader({ connected, partnerProfile, searchingText, s
 
               {/* Username / Status */}
               <span className="text-zinc-400 text-[10px] tracking-wider">
-                {connected ? partnerProfile?.username : data?.user?.userName}<span className='px-4'>{partnerProfile?.city}</span><span>{partnerProfile?.age}</span>
+                {connected ? partnerProfile?.username : data?.user?.userName}<span className='px-4'>{partnerProfile?.city}</span><span></span>
               </span>
             </>
           }
@@ -230,7 +237,7 @@ export default function ChatHeader({ connected, partnerProfile, searchingText, s
         {connected ? (
           <button
             disabled={state?.max_friend_req == 0}
-            // onClick={sendFriendRequest}
+            onClick={sendFriendRequest2}
             className="px-3 text-xs rounded-md font-medium hover:bg-white/10 text-white disabled:text-white/50"
           >
             <UserPlus2Icon size={24} />

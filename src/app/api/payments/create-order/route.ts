@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     phone:"2222222222",
     hash,
 
-    // action: "https://test.payu.in/_payment",
+    action: `${process.env.PAYU_BASE_URL}/_payment`
   });
 }
 

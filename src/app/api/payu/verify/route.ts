@@ -1,42 +1,62 @@
-import { prisma } from '@/lib/prisma'
+// app/api/payu/verify/route.ts
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { verifyPayUPayment } from "@/lib/payu";
 
-export async function POST(req: Request) {
-  const body = await req.formData()
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const txnid = searchParams.get("txnid");
 
-  const txnid = body.get('txnid') as string
-  const status = body.get('status') as string
-  const payuSubId = body.get('subscription_id') as string
-
-  const payment = await prisma.payment.findUnique({ where: { txnid } })
-  if (!payment) return new Response('Invalid txn', { status: 400 })
-
-  if (status !== 'success') {
-    await prisma.payment.update({
-      where: { txnid },
-      data: { status: 'FAILED' }
-    })
-    return Response.redirect(`${process.env.BASE_URL}/payment-failed`)
+  if (!txnid) {
+    return NextResponse.json({ error: "Missing txnid" }, { status: 400 });
   }
 
-  const nextBilling = new Date()
-  nextBilling.setMonth(nextBilling.getMonth() + 1)
+  const payment = await prisma.payment.findUnique({ where: { txnid } });
 
+  if (!payment) {
+    return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+  }
+
+  // Idempotency
+  if (payment.status === "SUCCESS") {
+    return NextResponse.json({ status: "SUCCESS" });
+  }
+
+  const isPaid = await verifyPayUPayment(txnid);
+
+  if (!isPaid) {
+    await prisma.payment.update({
+      where: { txnid },
+      data: { status: "FAILED" },
+    });
+
+    return NextResponse.json({ status: "FAILED" });
+  }
+
+  const plan = await prisma.plan.findUnique({
+    where: { id: payment.refId },
+  });
+  
+  if (!plan) {
+    throw new Error("Plan not found");
+  }
+  
+
+  // ✅ Mark payment success
   await prisma.$transaction([
     prisma.payment.update({
       where: { txnid },
-      data: { status: 'SUCCESS' }
+      data: { status: "SUCCESS" },
     }),
     prisma.user.update({
       where: { id: payment.userId },
       data: {
         planId: payment.refId,
-        billingDate: nextBilling,
-        payuSubId,
-        autopayEnabled: true,
-        pendingPlanId: null
-      }
-    })
-  ])
+        billingDate: new Date(),
+        chatCount:plan.maxDailyChats
+      },
+    }),
+  ]);
 
-  return Response.redirect(`${process.env.BASE_URL}/payment-success`)
+  return NextResponse.json({ status: "SUCCESS" });
 }

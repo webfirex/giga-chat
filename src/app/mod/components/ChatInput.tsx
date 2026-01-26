@@ -9,7 +9,7 @@ interface Props {
   connected: boolean;
   onSend: (text: string) => void;
   onTyping: () => void;
-  onImageSend: (imageUrl: string, price?: number) => void;
+  onImageSend: (imageId: string, price?: number) => void;
 }
 
 export default function ChatInput({
@@ -22,11 +22,9 @@ export default function ChatInput({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
-  const [price, setPrice] = useState<number | "">("")
-  const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null)
-
-
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [price, setPrice] = useState<number | "">("");
+  const [imageId, setImageId] = useState<string | null>(null);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -34,52 +32,22 @@ export default function ChatInput({
     setInput("");
   };
 
-  const handleBlur = async (file: File): Promise<string> => {
-    // e.preventDefault();
-    if (!file) return "error";
-
-    const formData = new FormData();
-    formData.append("image", file);
-
-    const res = await fetch("/api/blur", {
-      method: "POST",
-      body: formData,
-    });
-
-    const hostedUrl = await uploadImageToDB(file);
-
-    if (!res.ok) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to blur the image',
-        color: 'red',
-        icon: <IconX size={16} />
-      });
-      return "error";
-    }
-
-    const blob = await res.blob();
-    const imageUrl = URL.createObjectURL(blob);
-    return imageUrl
-  };
-
   const uploadImageToDB = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("image", file);
 
-    // Replace this with your actual endpoint (e.g., Cloudinary, S3, or local API)
     const response = await fetch("/api/mod/upload-image", {
       method: "POST",
       body: formData,
     });
 
     const data = await response.json();
-    if (!data.success) {
-      console.log("MESSAGE IMAGE BB", data)
+
+    if (!data.success || !data.imageId) {
       throw new Error("Upload failed");
     }
 
-    return data.imageUrl; // The hosted link returned by your DB/Storage
+    return data.imageId;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,11 +67,10 @@ export default function ChatInput({
     try {
       setIsUploading(true);
 
-      const imageUrl = await handleBlur(file);
-      if (imageUrl === "error") return;
+      const id = await uploadImageToDB(file);
 
       setSelectedImage(file);
-      setProcessedImageUrl(imageUrl);
+      setImageId(id);
       setPrice("");
 
       if (fileInputRef.current) {
@@ -121,19 +88,20 @@ export default function ChatInput({
       setIsUploading(false);
     }
   };
+  const IMAGE_PRICE_MARKER = " + imagePrice=";
 
   const sendImageWithPrice = () => {
-    if (!processedImageUrl || price === "") return;
-
-    // onImageSend(processedImageUrl, Number(price));
-    onImageSend(`${processedImageUrl} + imagePrice=${price}`);
+    if (!imageId || price === "") return;
+  
+    // concatenate imageId + price into a single string
+    onImageSend(`${imageId}${IMAGE_PRICE_MARKER}${price}`);
+  
     // cleanup
     setSelectedImage(null);
-    setProcessedImageUrl(null);
+    setImageId(null);
     setPrice("");
   };
-
-
+  
 
   return (
     <div className="border-t border-white/5 p-4 bg-[#0e1326]">
@@ -149,6 +117,7 @@ export default function ChatInput({
           placeholder="Reply to user..."
           className="flex-1 bg-[#0b0f1a] border border-white/10 rounded-xl px-4 py-3 outline-none disabled:opacity-40"
         />
+
         <div className="relative">
           <button
             type="button"
@@ -163,7 +132,6 @@ export default function ChatInput({
             )}
           </button>
 
-          {/* HIDDEN FILE INPUT */}
           <input
             type="file"
             ref={fileInputRef}
@@ -172,9 +140,8 @@ export default function ChatInput({
             className="hidden"
           />
 
-          {/* PRICE INPUT (appears after image selection) */}
           {selectedImage && (
-            <div className="absolute top-full mt-2 w-32">
+            <div className="absolute -top-full -left-20 mt-2 w-32">
               <input
                 type="number"
                 min="0"
@@ -183,7 +150,9 @@ export default function ChatInput({
                 value={price}
                 autoFocus
                 onChange={(e) =>
-                  setPrice(e.target.value === "" ? "" : Number(e.target.value))
+                  setPrice(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -195,9 +164,7 @@ export default function ChatInput({
               />
             </div>
           )}
-
         </div>
-
 
         <button
           onClick={handleSend}

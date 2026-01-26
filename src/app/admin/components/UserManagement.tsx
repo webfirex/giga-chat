@@ -6,11 +6,33 @@ import { Check } from "lucide-react";
 
 type User = {
   id: string;
-  firstName: string;
-  lastName: string;
-  totalGiftAmount: number;
-  plan?: { name: string };
+  fullName: string;
+  userName: string;
+  age: number;
+  city: string;
+  gender: string;
+  pfpUrl: string;
   selected?: boolean;
+};
+
+// 🔥 dummy upload function
+const uploadImageToDB = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  // Replace this with your actual endpoint (e.g., Cloudinary, S3, or local API)
+  const response = await fetch("/api/mod/upload-image", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json();
+  if (!data.success) {
+    console.log("MESSAGE IMAGE BB", data)
+    throw new Error("Upload failed");
+  }
+
+  return data.imageUrl; // The hosted link returned by your DB/Storage
 };
 
 export default function UsersManager() {
@@ -18,10 +40,15 @@ export default function UsersManager() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Filters (frontend only)
-  const [planFilter, setPlanFilter] = useState("");
-  const [minGift, setMinGift] = useState("");
-  const [maxGift, setMaxGift] = useState("");
+  // create user form state
+  const [form, setForm] = useState({
+    fullName: "",
+    userName: "",
+    age: "",
+    city: "",
+    gender: "",
+    image: null as File | null,
+  });
 
   const selectedUsers = users.filter(u => u.selected);
 
@@ -30,10 +57,7 @@ export default function UsersManager() {
     const res = await fetch(`/api/admin/users?page=${reset ? 1 : page}`);
     const data = await res.json();
 
-    setUsers(prev =>
-      reset ? data : [...prev, ...data]
-    );
-
+    setUsers(prev => (reset ? data : [...prev, ...data]));
     setLoading(false);
   };
 
@@ -41,17 +65,8 @@ export default function UsersManager() {
     fetchUsers(true);
   }, []);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(u => {
-      if (planFilter && (u.plan?.name ?? "Free") !== planFilter) return false;
-      if (minGift && u.totalGiftAmount < Number(minGift)) return false;
-      if (maxGift && u.totalGiftAmount > Number(maxGift)) return false;
-      return true;
-    });
-  }, [users, planFilter, minGift, maxGift]);
-
   const deleteSelected = async () => {
-    await fetch("/api/admin/users/delete", {
+    await fetch("/api/admin/users", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: selectedUsers.map(u => u.id) }),
@@ -59,6 +74,46 @@ export default function UsersManager() {
 
     setUsers(users.filter(u => !u.selected));
   };
+
+  const addUser = async () => {
+    if (!form.image) return alert("Please select an image");
+  
+    try {
+      const pfpUrl = await uploadImageToDB(form.image);
+  
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.fullName,
+          userName: form.userName,
+          age: Number(form.age),
+          city: form.city,
+          gender: form.gender,
+          pfpUrl,
+        }),
+      });
+  
+      const createdUser = await res.json();
+  
+      if (!res.ok) throw new Error(createdUser.error);
+  
+      setUsers(prev => [createdUser, ...prev]);
+  
+      setForm({
+        fullName: "",
+        userName: "",
+        age: "",
+        city: "",
+        gender: "",
+        image: null,
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create user");
+    }
+  };
+  
 
   return (
     <div className="flex flex-col gap-5 h-full pr-2">
@@ -75,54 +130,70 @@ export default function UsersManager() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <select
-          value={planFilter}
-          onChange={e => setPlanFilter(e.target.value)}
-          className="bg-[#0f1424] border border-white/10 px-3 py-2 rounded text-sm"
-        >
-          <option value="">All Plans</option>
-          <option value="Free">Free</option>
-          <option value="Basic">Basic</option>
-          <option value="Premium">Premium</option>
-        </select>
-
+      {/* Add User */}
+      <div className="grid grid-cols-7 gap-3 bg-[#0b0f1a] p-4 rounded-lg border border-white/10">
         <input
-          type="number"
-          placeholder="Min Gift"
-          value={minGift}
-          onChange={e => setMinGift(e.target.value)}
-          className="bg-[#0f1424] border border-white/10 px-3 py-2 rounded text-sm"
+          className="input"
+          placeholder="Full Name"
+          value={form.fullName}
+          onChange={e => setForm({ ...form, fullName: e.target.value })}
         />
-
         <input
-          type="number"
-          placeholder="Max Gift"
-          value={maxGift}
-          onChange={e => setMaxGift(e.target.value)}
-          className="bg-[#0f1424] border border-white/10 px-3 py-2 rounded text-sm"
+          className="input"
+          placeholder="Username"
+          value={form.userName}
+          onChange={e => setForm({ ...form, userName: e.target.value })}
         />
+        <input
+          className="input"
+          placeholder="Age"
+          type="number"
+          value={form.age}
+          onChange={e => setForm({ ...form, age: e.target.value })}
+        />
+        <input
+          className="input"
+          placeholder="City"
+          value={form.city}
+          onChange={e => setForm({ ...form, city: e.target.value })}
+        />
+        <input
+          className="input"
+          placeholder="Gender"
+          value={form.gender}
+          onChange={e => setForm({ ...form, gender: e.target.value })}
+        />
+        <input
+          type="file"
+          accept="image/*"
+          onChange={e =>
+            setForm({ ...form, image: e.target.files?.[0] ?? null })
+          }
+        />
+        <Button onClick={addUser} className="bg-indigo-600">
+          Add
+        </Button>
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-y-auto scrollbar-indigo rounded-lg border border-white/10">
+      <div className="flex-1 overflow-y-auto rounded-lg border border-white/10">
         <table className="w-full text-sm">
           <thead className="bg-[#0b0f1a] text-white/50">
             <tr>
               <th className="p-4 w-10" />
+              <th className="p-4">PFP</th>
               <th className="p-4 text-left">Full Name</th>
-              <th className="p-4 text-left">Plan</th>
-              <th className="p-4 text-right">Total Gift</th>
+              <th className="p-4 text-left">Username</th>
+              <th className="p-4 text-center">Age</th>
+              <th className="p-4 text-center">City</th>
+              <th className="p-4 text-center">Gender</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user, idx) => (
+            {users.map((user, idx) => (
               <tr
                 key={user.id}
-                className={`${
-                  idx % 2 === 0 ? "bg-[#0f1424]" : "bg-[#0b0f1a]"
-                } hover:bg-indigo-500/10 transition`}
+                className={`${idx % 2 === 0 ? "bg-[#0f1424]" : "bg-[#0b0f1a]"}`}
               >
                 <td className="p-4">
                   <button
@@ -139,18 +210,22 @@ export default function UsersManager() {
                         : "border-white/20"
                     }`}
                   >
-                    {user.selected && (
-                      <Check size={14} className="text-white" />
-                    )}
+                    {user.selected && <Check size={14} className="text-white" />}
                   </button>
                 </td>
-                <td className="p-4 font-medium">
-                  {user.firstName} {user.lastName}
+
+                <td className="p-4">
+                  <img
+                    src={user.pfpUrl}
+                    className="w-9 h-9 rounded-full object-cover"
+                  />
                 </td>
-                <td className="p-4">{user.plan?.name ?? "Free"}</td>
-                <td className="p-4 text-right text-indigo-400 font-semibold">
-                  ₹{user.totalGiftAmount}
-                </td>
+
+                <td className="p-4 font-medium">{user.fullName}</td>
+                <td className="p-4 text-indigo-400">{user.userName}</td>
+                <td className="p-4 text-center">{user.age}</td>
+                <td className="p-4 text-center">{user.city}</td>
+                <td className="p-4 text-center">{user.gender}</td>
               </tr>
             ))}
           </tbody>
@@ -161,11 +236,17 @@ export default function UsersManager() {
       <div className="flex justify-center">
         <Button
           onClick={() => {
-            setPage(p => p + 1);
-            fetchUsers();
+            setPage(p => {
+              const next = p + 1;
+              fetch(`/api/admin/users?page=${next}`)
+                .then(res => res.json())
+                .then(data => setUsers(prev => [...prev, ...data]));
+              return next;
+            });
+            
           }}
           disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-500"
+          className="bg-indigo-600"
         >
           Load More
         </Button>

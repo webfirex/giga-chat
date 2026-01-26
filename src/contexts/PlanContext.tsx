@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import React, {
   createContext,
   useContext,
@@ -39,6 +40,7 @@ const STORAGE_KEY = "user_plan_v3";
 export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PlanLimitations | null>(null);
   const [loading, setLoading] = useState(true);
+  const {data} = useSession()
 
   /**
    * Clears plan data from state + session storage
@@ -53,6 +55,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
    * Fetch fresh plan from server
    */
   const fetchUserPlan = useCallback(async () => {
+    console.log("USER LOGGED IN")
     setLoading(true);
     try {
       const response = await fetch("/api/user/plan-details");
@@ -103,6 +106,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
    */
   const decreaseChat = useCallback(async () => {
     if (!state || state.chats_left <= 0) return false;
+    
+    if(state.planName == "Premium") return false
 
     setState((prev) =>
       prev ? { ...prev, chats_left: Math.max(prev.chats_left - 1, 0) } : prev
@@ -113,7 +118,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error("Failed to decrease chat");
+        // throw new Error("Failed to decrease chat");
+        console.error("Chat decrease failed:");
       }
 
       const updatedState = state
@@ -125,6 +131,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updatedState));
       }
 
+      console.log("CHAT DECREASED")
       return true;
     } catch (error) {
       console.error("Chat decrease failed:", error);
@@ -145,6 +152,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
    */
   useEffect(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY);
+    // console.log(object)
 
     if (saved) {
       try {
@@ -156,7 +164,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     } else {
       fetchUserPlan();
     }
-  }, [fetchUserPlan]);
+  }, [fetchUserPlan, data]);
 
   return (
     <PlanContext.Provider

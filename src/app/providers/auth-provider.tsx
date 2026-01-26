@@ -31,7 +31,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
 
       // Admin logic: Can ONLY access /admin/...
       if (role === "ADMIN" && !pathname.startsWith("/admin")) {
-        router.replace("/admin/dashboard"); // Or your admin home
+        router.replace("/admin/");
       }
 
       // Mod logic: Can ONLY access /mod/...

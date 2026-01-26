@@ -12,7 +12,9 @@ import { notifications } from "@mantine/notifications";
 import { removeEmojis } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { RandomUserProfile } from "@/hooks/useModChatSocket";
-import { Mystery_Quest } from "next/font/google";
+// import { Mystery_Quest } from "next/font/google";
+// import { PayUVerifier } from "@/components/chat/PayuVerify";
+import { PaymentResultNotifier } from "@/components/chat/PaymentResultNotifier";
 
 type Message = {
   id: number;
@@ -27,7 +29,7 @@ type Message = {
 
 export default function UserChatPage() {
   const { data: session, status } = useSession();
-  const { state, decreaseChat } = usePlan()
+  const { state,loading, decreaseChat } = usePlan()
 
   const socketRef = useRef(getSocket(session?.user.id, state?.gender_filter));
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -60,19 +62,49 @@ export default function UserChatPage() {
     const socket = socketRef.current;
 
     socket.on("match:searching", (delay: number) => setSearchingText(`Searching...`));
-    socket.on("chat:connected", ({ roomId, username }) => {
+
+    const onConnected = ({ roomId, username }:{roomId:string, username:string}) => {
+      console.log("HEELOO CONNECTED");
+  
       setRoomId(roomId);
-      roomIdRef.current = roomId
+      roomIdRef.current = roomId;
       setMessages([]);
       setConnected(true);
       setSearchingText(null);
+  
       decreaseChat();
-
+  
       socket.emit("user:identify", {
         roomId,
         username,
       });
-    });
+    };
+    socket.on("chat:connected", onConnected);
+    // socket.on("chat:connected", ({ roomId, username }) => {
+    //   setRoomId(roomId);
+    //   roomIdRef.current = roomId;
+    //   setMessages([]);
+    //   setConnected(true);
+    //   console.log("HEELOO CONNECTED")
+    //   setSearchingText(null);
+    //   if(state?.chats_left){
+    //     console.log("CHATTT")
+    //     if (!loading && state?.chats_left > 0) {
+    //       console.log("DECREASED")
+    //       decreaseChat();
+    //     }
+    //   }
+    //   else{
+    //     console.log("DID NOT DECREASED")
+    //   }
+    //   console.log("DID NOT DECREASED")
+    
+    //   socket.emit("user:identify", {
+    //     roomId,
+    //     username,
+    //   });
+    // });
+    
 
     socket.on("friend:request-received", ({ roomId }) => {
 
@@ -268,20 +300,32 @@ export default function UserChatPage() {
     socketRef.current.emit("friend:request", {roomId:roomIdRef.current});
   };
 
+  const notifyNoChatsLeft = () => {
+    notifications.show({
+      title: "No chats left",
+      message: "You’ve reached your chat limit. Upgrade your plan to continue.",
+      color: "red",
+      autoClose: 4000,
+    });
+  };
+  
+
   const nextChat = () => {
-    // 1. Clear UI state immediately so the user knows the transition started
-    setChatStatus("me_skipped")
+    if (!state || state.chats_left <= 0) {
+      notifyNoChatsLeft();
+      return;
+    }
+  
+    setChatStatus("me_skipped");
     setMessages([]);
     setConnected(false);
     setPartnerProfile(null);
-    setSearchingText('Searching...')
-
-    // 2. Get the delay from plan context (e.g., 90s for Free, 15s for Basic, 0s for Premium)
-    const delay = (state?.min_match_time ? state.min_match_time : 0) * 1000;
-
+    setSearchingText("Searching...");
+  
+    const delay = (state.min_match_time ?? 0) * 1000;
+  
     setTimeout(() => {
       if (socketRef.current) {
-        // socketRef.current.emit("chat:next");
         if (myroomId) {
           socketRef.current.emit("chat:next", myroomId);
         }
@@ -289,18 +333,21 @@ export default function UserChatPage() {
       }
     }, delay);
   };
+  
 
   const chatStart = () => {
-    // 1. Clear UI state immediately so the user knows the transition started
-    // setChatStatus("me_skipped")
+    if (!state || state.chats_left <= 0) {
+      notifyNoChatsLeft();
+      return;
+    }
+  
     setMessages([]);
     setConnected(false);
     setPartnerProfile(null);
-    setSearchingText('Searching...')
-
-    // 2. Get the delay from plan context (e.g., 90s for Free, 15s for Basic, 0s for Premium)
-    const delay = (state?.min_match_time ? state.min_match_time : 0) * 1000;
-
+    setSearchingText("Searching...");
+  
+    const delay = (state.min_match_time ?? 0) * 1000;
+  
     setTimeout(() => {
       if (socketRef.current) {
         socketRef.current.emit("chat:next");
@@ -308,11 +355,10 @@ export default function UserChatPage() {
       }
     }, delay);
   };
+  
 
   return (
     <div className="h-dvh max-w-125 mx-auto border-x border-white/20 bg-[#0b0f1a] text-white flex ">
-      {/* Sidebar */}
-      {/* <Sidebar sessions={[]} /> */}
 
       {/* Chat Area */}
       <div className="flex flex-col flex-1 min-w-0">
@@ -333,6 +379,8 @@ export default function UserChatPage() {
           chatStatus={chatStatus}
         />
 
+        <PaymentResultNotifier />
+ 
         <ChatControls
           input={input}
           connected={connected}

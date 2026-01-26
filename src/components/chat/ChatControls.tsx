@@ -158,7 +158,9 @@ export default function ChatControls({
             </Button>
             <Button
               onClick={onNext}
-              disabled={searchingText !== null}
+              disabled={
+                searchingText !== null
+              }              
               className="bg-[#202020] text-md font-semibold hover:bg-indigo-500 px-8 py-4"
             >
               Skip
@@ -206,7 +208,11 @@ export default function ChatControls({
         {!connected && (
           <Button
             onClick={onChatStart}
-            disabled={searchingText !== null || state?.chats_left == 0}
+            // disabled={searchingText !== null || (state?.chats_left && state?.chats_left <= 0)}
+            disabled={
+              searchingText !== null 
+            }
+            
             className="bg-indigo-600 absolute -top-17 w-full text-md font-semibold hover:bg-indigo-500 px-4 py-6"
           >
             {!searchingText ? (state?.chats_left&&state?.chats_left > 0 ?"Find New Friends": "Come Back Tomorrow") : "Searching..."}
