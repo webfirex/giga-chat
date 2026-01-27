@@ -27,9 +27,9 @@ model User {
   // Profile and Chat Info
   username         String?   @unique
   gender           String?
-  chatCount        Int       @default(50)
+  chatCount        Int
   pfpUrl           String?
-  age              Int       @default(18)
+  age              Int
   city             String?
   state            String?
   interests        String[]  // Array of strings for interests
@@ -51,7 +51,7 @@ model User {
 
   autopayEnabled  Boolean   @default(false)
   payuSubId       String?   // subscription id from PayU for autopay
-  pendingPlanId   String?   @default("kjenjkeb3bd2rbr32ibr342r")
+  pendingPlanId   String?
 }
 
 model RandomUser {
