@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "@/lib/socket/socket-mod";
 import { generateRandomUser } from "@/lib/utils";
+import { notifications } from "@mantine/notifications";
+import { openConfirmModal } from "@mantine/modals";
+import { Text } from "@mantine/core";
 
 
 export type Message = {
@@ -67,25 +70,24 @@ export function useModChatSocket(modName: string) {
     // console.log("MOD SOCKET", socket)
     socket.emit("mod:online", { modName });
 
-    socket.on("friend:request-received", ({  roomId:reff }) => {
-      const accepted = confirm(`You received a friend request. Accept karoge? ${reff}`);
-    
-      if (!accepted) return;
-    
-      socket.emit("friend:request:accepted", {
-        reff,
-      });
-    
-      // ✅ ADD FRIEND (MOD / USER)
-      // await fetch("/api/friends/add", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ friendId: fromUserId }),
-      // });
-    });
+    socket.on("friend:request-received", ({roomId}) =>{
+      openConfirmModal({
+        title:"Friend Request",
+        labels:{confirm:"Accept", cancel:"Ignore"},
+        onConfirm: async()=>{
+
+          socket.emit("friend:request:accepted")
+        }
+      })
+    })
 
     socket.on("friend:request:accepted", ({ friendId }) => {
-      alert("Friend request accepted 🎉");
+      // alert("Friend request accepted 🎉");
+      notifications.show({
+        title:"Friend Added",
+        message:"Friend request accepted 🎉",
+        color:"green"
+      })
     
       // ✅ ADD FRIEND (OTHER SIDE)
       // await fetch("/api/friends/add", {

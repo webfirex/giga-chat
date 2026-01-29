@@ -12,6 +12,7 @@ import { Button } from '../ui/button'
 import { Carousel } from '@mantine/carousel'
 import '@mantine/carousel/styles.css'
 import { usePlan } from '@/contexts/PlanContext'
+import { notifications } from '@mantine/notifications'
 
 interface Plan {
   id: string
@@ -135,7 +136,11 @@ export default function PremiumModal({ open, onClose }: PremiumModalProps) {
       // clean up in case create failed
       localStorage.removeItem(TXN_KEY);
 
-      alert('Unable to start payment. Please try again.');
+      notifications.show({
+        title:"Error!",
+        message:"Unable to start the payment",
+        color:"red"
+      })
     }
   };
 

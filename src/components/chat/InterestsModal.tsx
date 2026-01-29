@@ -32,12 +32,14 @@ export default function InterestsModal({ opened, onClose }: InterestsModalProps)
 
         const fetchUser = async () => {
             try {
-                const res = await fetch('/api/user');
-                const data = await res.json();
+                // const res = await fetch('/api/user');
+                // const data = await res.json();
 
-                if (Array.isArray(data.interests)) {
-                    setInterests(data.interests);
-                }
+                // console.log("USER DATA", data)
+
+                // if (Array.isArray(data.interests)) {
+                //     setInterests(data.interests);
+                // }
 
                 setError(null);
             } catch (err) {

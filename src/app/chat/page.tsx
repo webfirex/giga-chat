@@ -29,7 +29,7 @@ type Message = {
 
 export default function UserChatPage() {
   const { data: session, status } = useSession();
-  const { state,loading, decreaseChat } = usePlan()
+  const { state, loading, decreaseChat } = usePlan()
 
   const socketRef = useRef(getSocket(session?.user.id, state?.gender_filter));
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +47,7 @@ export default function UserChatPage() {
   const [searchingText, setSearchingText] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(1);
   const [chatStatus, setChatStatus] = useState<"idle" | "active" | "partner_skipped" | "me_skipped">('idle')
-  
+
 
   const [userEnded, setUserEnded] = useState(false)
 
@@ -63,17 +63,17 @@ export default function UserChatPage() {
 
     socket.on("match:searching", (delay: number) => setSearchingText(`Searching...`));
 
-    const onConnected = ({ roomId, username }:{roomId:string, username:string}) => {
+    const onConnected = ({ roomId, username }: { roomId: string, username: string }) => {
       console.log("HEELOO CONNECTED");
-  
+
       setRoomId(roomId);
       roomIdRef.current = roomId;
       setMessages([]);
       setConnected(true);
       setSearchingText(null);
-  
+
       decreaseChat();
-  
+
       socket.emit("user:identify", {
         roomId,
         username,
@@ -98,42 +98,62 @@ export default function UserChatPage() {
     //     console.log("DID NOT DECREASED")
     //   }
     //   console.log("DID NOT DECREASED")
-    
+
     //   socket.emit("user:identify", {
     //     roomId,
     //     username,
     //   });
     // });
-    
 
-    socket.on("friend:request-received", ({ roomId }) => {
 
-        const accepted = window.confirm("You received a friend request. Accept?");
-        
-        if (!accepted) return;
-        
-        socket.emit("friend:request:accepted", {roomId:roomIdRef.current});
-        
-        // ✅ ADD FRIEND (MOD / USER)
-        // await fetch("/api/friends/add", {
-          //   method: "POST",
-          //   headers: { "Content-Type": "application/json" },
-          //   body: JSON.stringify({ friendId: fromUserId }),
-          // });
+    socket.on("friend:request-received", async ({ roomId }) => {
+
+      const accepted = window.confirm("You received a friend request. Accept?");
+
+      if (!accepted) return;
+
+      if (!partnerProfile) return;
+
+
+      const res = await fetch("/api/user/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: partnerProfile.username,
+          fullName: partnerProfile.name,
+          avatarUrl: partnerProfile.avatarUrl,
+          city: partnerProfile.city
+        })
+      });
+
+      if (!res.ok) return;
+      socket.emit("friend:request:accepted", { roomId: roomIdRef.current });
     });
 
-    socket.on("friend:request:accepted", ({ friendId }) => {
-      alert("Friend request accepted 🎉");
-    
-      // ✅ ADD FRIEND (OTHER SIDE)
-      // await fetch("/api/friends/add", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ friendId }),
-      // });
+    socket.on("friend:request:accepted", async({ friendId }) => {
+
+      if (!partnerProfile) return;
+
+      const res = await fetch("/api/user/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: partnerProfile.username,
+          fullName: partnerProfile.name,
+          avatarUrl: partnerProfile.avatarUrl,
+          city: partnerProfile.city
+        })
+      });
+
+      if (!res.ok) return;
+      notifications.show({
+        title: "Friend Added",
+        message: "Friend request accepted 🎉",
+        color: "green"
+      })
     });
-    
-    
+
+
 
 
     socket.on("chat:user-profile", ({ roomId, userProfile }) => {
@@ -297,7 +317,7 @@ export default function UserChatPage() {
 
   const sendFriendRequest = () => {
     console.log("FREIND REQ SEND USER", myroomId)
-    socketRef.current.emit("friend:request", {roomId:roomIdRef.current});
+    socketRef.current.emit("friend:request", { roomId: roomIdRef.current });
   };
 
   const notifyNoChatsLeft = () => {
@@ -308,22 +328,22 @@ export default function UserChatPage() {
       autoClose: 4000,
     });
   };
-  
+
 
   const nextChat = () => {
     if (!state || state.chats_left <= 0) {
       notifyNoChatsLeft();
       return;
     }
-  
+
     setChatStatus("me_skipped");
     setMessages([]);
     setConnected(false);
     setPartnerProfile(null);
     setSearchingText("Searching...");
-  
+
     const delay = (state.min_match_time ?? 0) * 1000;
-  
+
     setTimeout(() => {
       if (socketRef.current) {
         if (myroomId) {
@@ -333,21 +353,21 @@ export default function UserChatPage() {
       }
     }, delay);
   };
-  
+
 
   const chatStart = () => {
     if (!state || state.chats_left <= 0) {
       notifyNoChatsLeft();
       return;
     }
-  
+
     setMessages([]);
     setConnected(false);
     setPartnerProfile(null);
     setSearchingText("Searching...");
-  
+
     const delay = (state.min_match_time ?? 0) * 1000;
-  
+
     setTimeout(() => {
       if (socketRef.current) {
         socketRef.current.emit("chat:next");
@@ -355,7 +375,7 @@ export default function UserChatPage() {
       }
     }, delay);
   };
-  
+
 
   return (
     <div className="h-dvh max-w-125 mx-auto border-x border-white/20 bg-[#0b0f1a] text-white flex ">
@@ -364,7 +384,7 @@ export default function UserChatPage() {
       <div className="flex flex-col flex-1 min-w-0">
         <ChatHeader
           connected={connected}
-          partnerProfile={ partnerProfile}
+          partnerProfile={partnerProfile}
           searchingText={searchingText || undefined}
           sendFriendRequest={sendFriendRequest}
         />
@@ -380,7 +400,7 @@ export default function UserChatPage() {
         />
 
         <PaymentResultNotifier />
- 
+
         <ChatControls
           input={input}
           connected={connected}
@@ -393,9 +413,12 @@ export default function UserChatPage() {
           onSendGift={sendGiftMessage}
           onExit={() => {
             socketRef.current.emit("chat:next", roomIdRef.current);
-            setChatStatus("me_skipped")
+            socketRef.current.emit("match:cancel");
+            setSearchingText(null);
             setConnected(false);
             setMessages([]);
+            setPartnerProfile(null);
+            setChatStatus("idle");
           }}
           onExit2={() => {
             socketRef.current.emit("chat:next", roomIdRef.current);

@@ -4,7 +4,7 @@ import {
   MAX_CHATS_PER_MOD,
   activeChats,
   searchTimeouts,
-  endChat,
+  searchingSockets,
   clearSearch
 } from "./socket-utils.js";
 
@@ -36,67 +36,85 @@ export const handleUserNext = (io: SocketIOServer, socket: Socket) => {
   if (socket.data.role !== "user") return;
 
   console.log(`[QUEUE] User ${socket.id} started searching...`);
+
+  // 🧹 clear any previous search
   clearSearch(socket.id);
 
-  // Math check: Your delay was quite short (1.8s to 7.2s). 
-  // For production, ensure this isn't getting killed by Vercel timeouts.
-  const min = 3000; 
+  searchingSockets.add(socket.id);
+
+  const min = 3000;
   const max = 7200;
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
 
   socket.emit("match:searching", delay);
 
   const timeout = setTimeout(() => {
-    // Debug: Check if any mods actually exist in memory
-    console.log(`[MATCHMAKING] Current Mod Loads Map Size: ${modLoads.size}`);
-    
+    // ❌ user cancelled search meanwhile
+    if (!searchingSockets.has(socket.id)) {
+      console.log(`[MATCH_ABORTED] User ${socket.id} cancelled search`);
+      return;
+    }
+
+    console.log(`[MATCHMAKING] Mod load count: ${modLoads.size}`);
+
     const availableMods = [...modLoads.entries()]
-      .filter(([_, count]) => count < MAX_CHATS_PER_MOD)
-      .sort((a, b) => a[1] - b[1]);
+    .filter(([modId, count]) => {
+      return count < MAX_CHATS_PER_MOD;
+    })    
+    .sort((a, b) => a[1] - b[1]);
 
     const modSocketId = availableMods[0]?.[0];
 
     if (!modSocketId) {
-      console.warn(`[MATCHMAKING_FAIL] No mods in memory for User ${socket.id}`);
+      console.warn(`[MATCH_FAIL] No available mods for ${socket.id}`);
+      searchingSockets.delete(socket.id);
       socket.emit("no-mod-available");
       return;
     }
 
     const modSocket = io.sockets.sockets.get(modSocketId);
     if (!modSocket) {
-      console.error(`[MATCHMAKING_FAIL] Mod ${modSocketId} found in Map but socket is missing from IO`);
-      modLoads.delete(modSocketId); // Clean up stale data
+      console.warn(`[STALE_MOD] ${modSocketId} missing, cleaning up`);
+      modLoads.delete(modSocketId);
+      searchingSockets.delete(socket.id);
       return;
     }
 
     const roomId = `chat_${socket.id}_${modSocketId}`;
-    
-    // Join logic
+
+    // join room
     socket.join(roomId);
     modSocket.join(roomId);
-    
-    // Use optional chaining for the Set in case it wasn't initialized
-    if (!socket.data.rooms) socket.data.rooms = new Set();
-    if (!modSocket.data.rooms) modSocket.data.rooms = new Set();
-    
+
+    socket.data.rooms ??= new Set();
+    modSocket.data.rooms ??= new Set();
+
     socket.data.rooms.add(roomId);
     modSocket.data.rooms.add(roomId);
-    
-    activeChats.set(roomId, { userId: socket.id, modId: modSocketId });
+
+    activeChats.set(roomId, {
+      userId: socket.id,
+      modId: modSocketId,
+    });
+
     modLoads.set(modSocketId, (modLoads.get(modSocketId) ?? 0) + 1);
-    
+
+    // ✅ REMOVE BOTH FROM SEARCHING
+    searchingSockets.delete(socket.id);
+
     socket.emit("chat:connected", { roomId });
     modSocket.emit("mod:new-chat", {
       roomId,
       userId: socket.data.userId,
-      userGenderSelected: socket.data.gender
+      userGenderSelected: socket.data.gender,
     });
-    
-    console.log(`[SUCCESS] Room Created: ${roomId}`);
+
+    console.log(`[MATCH_SUCCESS] Room ${roomId} created`);
   }, delay);
 
   searchTimeouts.set(socket.id, timeout);
 };
+
 
 export const handleMessage = (
   io: SocketIOServer,

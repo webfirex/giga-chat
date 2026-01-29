@@ -99,3 +99,37 @@ export async function verifyPayUPayment(txnid: string): Promise<boolean> {
     data?.transaction_details?.[txnid]?.status === "success"
   );
 }
+
+export function generatePayUHash({
+  key,
+  txnid,
+  amount,
+  productinfo,
+  firstname,
+  email,
+  salt,
+}: {
+  key: string
+  txnid: string
+  amount: string 
+  productinfo: string
+  firstname: string
+  email: string
+  salt: string
+}) {
+  const hashString = [
+      key,
+      txnid,
+      amount,
+      productinfo,
+      firstname,
+      email,
+      '', '', '', '', '', '', '', '', '', '',
+      salt,
+    ].join('|');
+
+  return crypto
+    .createHash('sha512')
+    .update(hashString)
+    .digest('hex')
+}

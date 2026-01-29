@@ -4,7 +4,7 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const PUBLIC_ROUTES = ["/login", "/signup"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/success"];
 const PUBLIC_LOGIN_PREFIXES = ["/admin/login", "/mod/login"];
 
 function AuthGuard({ children }: { children: ReactNode }) {

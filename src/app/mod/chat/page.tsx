@@ -20,7 +20,7 @@ export default function ModChatPage() {
     handleTyping,
     exitChat,
     sendImageMessage,
-    sendFriendRequest
+    sendFriendRequest 
   } = useModChatSocket(modName);
 
   const activeChat = chats.find(

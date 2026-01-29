@@ -33,7 +33,7 @@ export function PaymentResultNotifier() {
       attempts++;
 
       try {
-        const res = await fetch(`/api/payment/status?txnid=${txnid}`);
+        const res = await fetch(`/api/payu/status?txnid=${txnid}`);
         const data = await res.json();
 
         if (data.status === "SUCCESS") {

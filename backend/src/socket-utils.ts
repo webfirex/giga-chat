@@ -23,6 +23,10 @@ export const activeChats = new Map<
 // socket.id -> matchmaking timeout
 export const searchTimeouts = new Map<string, NodeJS.Timeout>();
 
+// socket.id -> currently searching
+export const searchingSockets = new Set<string>();
+
+
 // ==============================
 // Clear matchmaking search
 // ==============================
@@ -32,7 +36,11 @@ export const clearSearch = (socketId: string) => {
     clearTimeout(timeout);
     searchTimeouts.delete(socketId);
   }
+
+  // 🛑 Explicitly mark as not searching
+  searchingSockets.delete(socketId);
 };
+
 
 // ==============================
 // End chat & cleanup room

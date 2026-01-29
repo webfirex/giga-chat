@@ -205,19 +205,26 @@ export default function ChatControls({
       {/* Input Area */}
 
       <div className="flex gap-2 items-center relative">
-        {!connected && (
+        {!connected && !searchingText && (
           <Button
             onClick={onChatStart}
-            // disabled={searchingText !== null || (state?.chats_left && state?.chats_left <= 0)}
-            disabled={
-              searchingText !== null
-            }
-
             className="bg-indigo-600 absolute -top-17 w-full text-md font-semibold hover:bg-indigo-500 px-4 py-6"
           >
-            {!searchingText ? (state?.chats_left && state?.chats_left > 0 ? "Find New Friends" : "Come Back Tomorrow") : "Searching..."}
+            {state?.chats_left && state?.chats_left > 0
+              ? "Find New Friends"
+              : "Come Back Tomorrow"}
           </Button>
         )}
+
+        {!connected && searchingText && (
+          <Button
+            onClick={onExit}
+            className="bg-[#c71b39] absolute -top-17 w-full text-md font-semibold hover:bg-red-500 px-4 py-6"
+          >
+            Stop Searching
+          </Button>
+        )}
+
         <div className="relative flex-1">
           <textarea
             value={input}
@@ -266,7 +273,7 @@ export default function ChatControls({
                   if (!state?.can_send_gifs) {
                     notifications.show({
                       title: "Upgrade Required",
-                      message: "Upgrade your plan to send GIFs.",
+                      message: "Upgrade your plan to send Images.",
                       color: "yellow",
                       autoClose: 4000,
                     });

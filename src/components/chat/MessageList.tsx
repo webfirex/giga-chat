@@ -102,9 +102,13 @@ export default function MessageList({
                       w-64 max-w-[70%]
                       rounded-2xl overflow-hidden
                       border-2
-                      ${price && price>0
-                        ? "border-amber-400 bg-amber-400/10"
-                        : "border-white/20 cursor-pointer"}
+                      ${isLocked
+                        ? price && price > 0
+                          ? "border border-amber-400 bg-amber-400/10"
+                          : "border border-white/20"
+                        : ""
+                      }
+                      
                       `}
                     onClick={() => {
                       if (!isLocked) setOpenImage(imageSrc);

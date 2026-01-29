@@ -5,7 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 // Note: Ensure your local imports use the .js extension for ESM compatibility on Render
-import { modLoads, clearSearch, endChat } from "./socket-utils.js";
+import { modLoads, clearSearch, endChat, searchingSockets } from "./socket-utils.js";
 import { handleUserNext, handleMessage, handleGiftMessage } from "./socket-handler.js";
 
 dotenv.config();
@@ -57,8 +57,9 @@ io.on("connection", (socket: Socket) => {
   }
   if (role === "mod") {
     modLoads.set(socket.id, 0);
-    console.log(`[MOD_INIT] Mod ${socket.id} added to load balancer.`);
+    console.log(`[MOD_READY] ${socket.id} added to matchmaking pool`);
   }
+  
 
   // 3. Structured Event Handlers (Matched Exactly)
   socket.on("user:identify", ({ roomId, username }) => {
@@ -166,20 +167,32 @@ socket.on("friend:request:accepted", ({ roomId }) => {
 
   // 4. Cleanup Logic (Matched Exactly)
   socket.on("disconnect", (reason) => {
-    console.log(`[DISCONNECTED] ${socket.id} | Reason: ${reason}`);
-    
+    console.log(`[DISCONNECTED] ${socket.id} | ${reason}`);
+  
     try {
       clearSearch(socket.id);
+      searchingSockets.delete(socket.id);
+  
       for (const roomId of socket.data.rooms ?? []) {
         endChat(io, roomId);
       }
+  
       if (socket.data.role === "mod") {
         modLoads.delete(socket.id);
       }
-    } catch (error) {
-      console.error(`[CLEANUP_ERROR] ${socket.id}:`, error);
+    } catch (err) {
+      console.error(`[CLEANUP_ERROR] ${socket.id}`, err);
     }
   });
+  
+
+  socket.on("match:cancel", () => {
+    clearSearch(socket.id);
+    searchingSockets.delete(socket.id);
+  });
+  
+  
+  
 
   socket.on("error", (err) => {
     console.error(`[SOCKET_INTERNAL_ERROR] ${socket.id}:`, err);

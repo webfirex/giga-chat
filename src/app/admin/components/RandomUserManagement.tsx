@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { notifications } from "@mantine/notifications";
 
 
 type User = {
@@ -67,7 +68,14 @@ export default function RandomUsersManager() {
   };
 
   const addUser = async () => {
-    if (!form.pfpUrl) return alert("Please enter an image URL");
+    if (!form.pfpUrl) {
+      notifications.show({
+        title:"Please enter a image url",
+        message:"The image url cannot be empty",
+        color:"yellow"
+      })
+      return
+    }
 
     try {
       const res = await fetch("/api/admin/users/random-users", {
@@ -99,7 +107,11 @@ export default function RandomUsersManager() {
       });
     } catch (err) {
       console.error(err);
-      alert("Failed to create user");
+      notifications.show({
+        title:"Error",
+        message:"Something went wrong",
+        color:"red"
+      })
     }
   };
 

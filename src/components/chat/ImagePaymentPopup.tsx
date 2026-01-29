@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import { Lock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { notifications } from "@mantine/notifications";
 
 interface ImagePaymentPopupProps {
   imageId: string;
   price: number;
   onClose: () => void;
-  onSuccess: () => void; // called after successful payment
+  onSuccess: () => void;
 }
+
+const TXN_KEY = "payu_txnid";
 
 const ImagePaymentPopup = ({
   imageId,
@@ -18,6 +21,8 @@ const ImagePaymentPopup = ({
   onSuccess,
 }: ImagePaymentPopupProps) => {
   const [amount] = useState<number>(price);
+  const [activeTxnid, setActiveTxnid] = useState<string | null>(null);
+
 
   const handlePay = async () => {
     const windowName = `payu_image_${Date.now()}`;
@@ -45,18 +50,16 @@ const ImagePaymentPopup = ({
       const res = await fetch("/api/image-payment/init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageId,
-          amount,
-        }),
+        body: JSON.stringify({ imageId, amount }),
       });
 
       if (!res.ok) throw new Error("Image payment init failed");
 
-      const { action, payload } = await res.json();
+      const { txnid, action, payload } = await res.json();
 
-      // persist context
-      localStorage.setItem("LAST_IMAGE_TXNID", payload.txnid);
+      // ✅ persist txnid + context
+      localStorage.setItem(TXN_KEY, txnid);
+      setActiveTxnid(txnid);
       localStorage.setItem("LAST_IMAGE_ID", imageId);
       localStorage.setItem("LAST_IMAGE_AMOUNT", String(amount));
 
@@ -82,25 +85,68 @@ const ImagePaymentPopup = ({
     }
   };
 
+  // ✅ POLL STATUS API (WEBHOOK SOURCE OF TRUTH)
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-
-      if (event.data?.type === "PAYU_PAYMENT_COMPLETED") {
-        if (event.data.status === "SUCCESS") {
+    if (!activeTxnid) return;
+  
+    let attempts = 0;
+  
+    const interval = setInterval(async () => {
+      attempts++;
+  
+      try {
+        const res = await fetch(`/api/payu/status?txnid=${activeTxnid}`);
+        const data = await res.json();
+  
+        if (data.status === "SUCCESS") {
+          clearInterval(interval);
+  
           onSuccess();
           onClose();
+  
+          localStorage.removeItem(TXN_KEY);
+          localStorage.removeItem("LAST_IMAGE_ID");
+          localStorage.removeItem("LAST_IMAGE_AMOUNT");
+  
+          setActiveTxnid(null);
         }
-
-        localStorage.removeItem("LAST_IMAGE_TXNID");
-        localStorage.removeItem("LAST_IMAGE_ID");
-        localStorage.removeItem("LAST_IMAGE_AMOUNT");
+  
+        if (data.status === "FAILED") {
+          clearInterval(interval);
+  
+          notifications.show({
+            title:"Error!",
+            message:"Image payment failed",
+            color:"red"
+          })
+  
+          localStorage.removeItem(TXN_KEY);
+          localStorage.removeItem("LAST_IMAGE_ID");
+          localStorage.removeItem("LAST_IMAGE_AMOUNT");
+  
+          setActiveTxnid(null);
+        }
+  
+        if (attempts > 30) {
+          clearInterval(interval);
+          setActiveTxnid(null);
+        }
+      } catch (err) {
+        console.error("Image payment status check failed", err);
       }
-    };
+    }, 2000);
+  
+    return () => clearInterval(interval);
+  }, [activeTxnid, onSuccess, onClose]);
 
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [onSuccess, onClose]);
+  useEffect(() => {
+    const storedTxnid = localStorage.getItem(TXN_KEY);
+    if (storedTxnid) {
+      setActiveTxnid(storedTxnid);
+    }
+  }, []);
+  
+  
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">

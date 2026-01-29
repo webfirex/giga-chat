@@ -114,7 +114,7 @@ export async function POST(req: Request) {
       }
     } catch (e) {}
 
-    setTimeout(() => window.close(), 1500)
+    setTimeout(() => window.close(), 800)
   </script>
 </body>
 </html>`,
