@@ -23,12 +23,8 @@ export async function generateRandomUser(
   genderMatch: GenderMatch
 ): Promise<RandomUserProfile> {
 
-  // const gender = genderMatch.toLocaleUpperCase()
-  const gender =
-  genderMatch.charAt(0).toUpperCase() + genderMatch.slice(1).toLowerCase();
-
   const res = await fetch(
-    `/api/mod/get-random-user?gender=${gender}`,
+    `/api/mod/get-random-user?gender=${genderMatch}`,
     {
       method: "GET",
       cache: "no-store",

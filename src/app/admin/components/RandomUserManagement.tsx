@@ -86,7 +86,7 @@ export default function RandomUsersManager() {
           userName: form.userName,
           age: Number(form.age),
           city: form.city,
-          gender: form.gender,
+          gender: form.gender.toLowerCase(),
           pfpUrl: form.pfpUrl,
         }),
       });
@@ -231,7 +231,7 @@ export default function RandomUsersManager() {
 
 
       {/* Table */}
-      <div className="flex-1 overflow-y-auto rounded-lg border border-white/10">
+      <div className="flex-1 overflow-y-auto rounded-lg border border-white/10 scrollbar-indigo">
         <table className="w-full text-sm">
           <thead className="bg-[#0b0f1a] text-white/50">
             <tr>
@@ -279,7 +279,7 @@ export default function RandomUsersManager() {
                 <td className="p-4 text-indigo-400">{user.userName}</td>
                 <td className="p-4 text-center">{user.age}</td>
                 <td className="p-4 text-center">{user.city}</td>
-                <td className="p-4 text-center">{user.gender}</td>
+                <td className="p-4 text-center">{user.gender.charAt(0).toUpperCase() + user.gender.slice(1)}</td>
               </tr>
             ))}
           </tbody>
